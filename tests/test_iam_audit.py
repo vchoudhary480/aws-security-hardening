@@ -40,7 +40,7 @@ def test_user_with_mfa_clean(iam_client):
     iam_client.create_virtual_mfa_device(VirtualMFADeviceName="bob-mfa")
     # moto marks MFA as present once the device exists and is associated
     # Use enable_mfa_device to wire it to the user
-    serial = f"arn:aws:iam::123456789012:mfa/bob-mfa"
+    serial = "arn:aws:iam::123456789012:mfa/bob-mfa"
     iam_client.enable_mfa_device(
         UserName="bob",
         SerialNumber=serial,

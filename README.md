@@ -1,17 +1,68 @@
 # AWS Cloud Security Hardening
 
-A hands-on AWS security project that hardens a fresh account against common misconfigurations and validates the configuration with custom Python audits. Built as a portfolio piece while preparing for SOC analyst and cloud security roles.
+Hardened a fresh AWS account against common misconfigurations and built Python scripts to detect them automatically. Built this to learn Boto3 and the underlying AWS API shapes while preparing for SOC analyst and cloud security roles.
 
-## Overview
+## What this project does
 
-This project demonstrates end-to-end cloud security implementation on AWS:
+I configured a real AWS account with proper IAM, S3, CloudTrail, and AWS Config settings, then wrote audit scripts that scan the account and flag anything misconfigured. The scripts produce a JSON report you can pipe into a SIEM or use as a CI/CD exit code gate.
 
-- **IAM** — Root MFA, least-privilege admin user, separation of root from daily-use account
-- **S3** — AES-256 default encryption, versioning, account-wide Block Public Access
-- **Logging** — Multi-region CloudTrail with log file validation
-- **Compliance** — AWS Config recording configuration changes across all supported resources
-- **Automation** — Python audit scripts using Boto3 to detect misconfigurations across all regions
-- **Validation** — Controlled detection self-test to verify script accuracy
+The security group auditor scans every enabled AWS region, not just the default one. Real attackers spin up resources in obscure regions specifically because nobody looks there.
+
+I also ran controlled detection tests to verify the scripts actually catch what they claim to catch, including edge cases like large CIDR blocks and wildcard S3 policies hidden behind condition blocks.
+
+## Project layout
+
+```
+scripts/iam_audit.py              # missing MFA, stale access keys, inactive consoles
+scripts/s3_audit.py               # public access, encryption, versioning, wildcard policies
+scripts/security_groups_audit.py  # SSH/RDP/database ports open to the internet, all regions
+scripts/full_audit.py             # runs all three, outputs JSON report
+tests/                            # moto-based unit tests for all audit modules
+CIS_MAPPING.md                    # maps each check to a CIS AWS Foundations Benchmark v1.4 control
+```
+
+## How to run it
+
+```bash
+pip install -r requirements.txt
+cd scripts
+python full_audit.py
+```
+
+Output:
+- Console summary with severity counts
+- `docs/audit_report_YYYYMMDD_HHMMSS.json` for SIEM ingestion
+- Exit code 0 (clean) or 1 (findings detected) for CI/CD pipelines
+
+## What it detects
+
+**IAM**
+- Users without MFA
+- Access keys older than 90 days
+- Console passwords unused for 90+ days
+
+**S3**
+- Missing block public access flags
+- No default encryption
+- Versioning disabled
+- Access logging off
+- Bucket policies with wildcard principals
+
+**Security Groups (all regions)**
+- SSH and RDP open to the internet
+- Database ports exposed publicly (MySQL, PostgreSQL, Redis, MongoDB, and others)
+- Overly large port ranges
+- All-traffic rules
+
+## Detection self-test
+
+To verify the scripts catch what they claim, I created intentionally misconfigured resources and confirmed detection. I also tested adversarial edge cases that naive checks miss:
+
+- A /8 CIDR block (not literally 0.0.0.0/0 but effectively public)
+- An S3 policy granting wildcard access via a Condition block
+- An IAM user with iam:PassRole to a privileged role
+
+All findings were detected at the correct severity. Clean resources produced no false positives.
 
 ## Architecture
 
@@ -54,93 +105,36 @@ flowchart TB
     style REPORT fill:#666,stroke:#333,color:#fff
 ```
 
-## Audit Scripts
+## Security decisions
 
-| Script | Purpose |
-|---|---|
-| `scripts/iam_audit.py` | Missing MFA, access keys >90d old, inactive consoles |
-| `scripts/s3_audit.py` | Public access, encryption, versioning, access logging, wildcard policies |
-| `scripts/security_groups_audit.py` | SSH/RDP open to internet, exposed databases, large port ranges — scans all regions |
-| `scripts/full_audit.py` | Orchestrator — runs all audits, generates JSON report |
+- **AdministratorAccess on the admin group** — fine for a lab. Production would use scoped policies.
+- **GuardDuty and Security Hub not enabled** — both have free trials, but I scoped this project to CloudTrail, AWS Config, and custom Python detections to stay within the always-free tier.
+- **S3 access logging not enabled on all buckets** — left as a known finding to show how the script surfaces real gaps.
 
-## Usage
+## Relationship to existing tools
 
-### Prerequisites
-- AWS account with admin IAM user (root not used for daily work)
-- AWS CLI configured (`aws configure`)
-- Python 3.10+
+Prowler, ScoutSuite, and CloudSploit already do this at production scale. The point of this project was to learn Boto3, the AWS auth flow, and the underlying API shapes by rebuilding a slice of what Prowler does from scratch. In a real environment I would run Prowler alongside custom detections for organization-specific controls.
 
-```bash
-pip install -r requirements.txt
-```
+## CIS benchmark mapping
 
-### Run an audit
+See [CIS_MAPPING.md](CIS_MAPPING.md) for the full table mapping each check to a CIS AWS Foundations Benchmark v1.4 control number.
 
-```bash
-cd scripts
-python full_audit.py
-```
+## Sample output
 
-Output:
-- Console — executive summary with severity counts
-- File — `docs/audit_report_YYYYMMDD_HHMMSS.json`
-- Exit code — 0 (clean) or 1 (findings detected) for CI/CD integration
-
-## Validation: Detection Self-Test
-
-To verify the audit scripts catch what they claim to catch, I created an intentionally misconfigured security group with three classic real-world mistakes:
-
-1. SSH (port 22) open to `0.0.0.0/0` — admin access exposed to the internet
-2. MySQL (port 3306) open to `0.0.0.0/0` — database exposed directly to the internet
-3. Port range 8000-9000 open to `0.0.0.0/0` — overly permissive bulk rule
-
-I also tested adversarial edge cases that simpler checks would miss:
-
-- A `/8` CIDR block (effectively public but not literally `0.0.0.0/0`)
-- An S3 bucket policy with wildcard access granted via a `Condition` block
-- An IAM user with `iam:PassRole` to a highly privileged role
-
-The audit script correctly identified all findings with appropriate severity ratings, then verified the clean state after remediation. See `CIS_MAPPING.md` for the control-by-control breakdown.
+Vulnerable security group detection:
 
 ![Vulnerable SG detection](screenshots/01_vulnerable_sg_findings.png)
 
-## Sample Output
-
-Full audit running against the hardened account:
+Full audit summary:
 
 ![Full audit summary](screenshots/02_full_audit_summary.png)
 
-JSON audit report (machine-readable, suitable for SIEM ingestion):
+JSON report:
 
 ![JSON report](screenshots/03_audit_report_json.png)
 
-## Relationship to Existing Tooling
-
-Tools like [Prowler](https://github.com/prowler-cloud/prowler), ScoutSuite, and CloudSploit already solve this problem at production scale. The goal of this project wasn't to compete with them — it was to learn Boto3, the AWS auth flow, and the underlying API shapes by rebuilding a narrow slice of what Prowler does from scratch. In a real environment I would run Prowler (or the equivalent AWS Config managed rules) alongside custom detections for organization-specific controls.
-
-## Security Decisions and Trade-offs
-
-- **AdministratorAccess on the admin group** — Used for lab simplicity. Production deployments should use scoped IAM policies following the principle of least privilege.
-- **GuardDuty and Security Hub not enabled** — Both services offer free trials (GuardDuty: 30 days, Security Hub: free tier available), but I scoped this project to CloudTrail + AWS Config + custom Python detections to stay within the always-free tier and keep the focus on the detection engineering layer.
-- **S3 access logging not enabled on all buckets** — Left as a known finding to demonstrate how the audit script triages real configuration gaps.
-
-## CIS AWS Foundations Benchmark
-
-See [`CIS_MAPPING.md`](CIS_MAPPING.md) for the control-by-control mapping between this project's checks and the CIS AWS Foundations Benchmark v1.4.
-
-## Skills Demonstrated
-
-- AWS service configuration via CLI (IAM, S3, CloudTrail, Config, EC2)
-- Python automation using the Boto3 SDK
-- JSON policy authoring (IAM trust policies, S3 bucket policies)
-- Compliance frameworks (CIS AWS Foundations Benchmark v1.4)
-- Detection engineering — controlled negative testing and adversarial edge cases
-- Defensive scripting (no hardcoded credentials, pagination, error handling, multi-region)
-
 ## Author
 
-**Vishwa Prakash Choudhary**
-- Computer Science, UC Davis (graduating August 2026)
-- vpc8848@gmail.com
-- [GitHub](https://github.com/vchoudhary480)
-
+Vishwa Prakash Choudhary
+Computer Science, UC Davis
+vpc8848@gmail.com

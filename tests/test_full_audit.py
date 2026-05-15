@@ -8,7 +8,6 @@ runs the full orchestrator, and asserts the JSON report shape and content.
 import sys
 import json
 import boto3
-import pytest
 from pathlib import Path
 from moto import mock_aws
 from unittest.mock import patch
@@ -82,7 +81,6 @@ def test_full_audit_report_shape(tmp_path):
         return combined
 
     # Redirect report output to tmp_path
-    original_save = full_audit.save_report
 
     def mock_save(findings):
         report = {

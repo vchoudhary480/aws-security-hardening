@@ -1,0 +1,49 @@
+{
+  "audit_metadata": {
+    "timestamp": "2026-05-15T11:11:10.092691",
+    "total_findings": 5,
+    "severity_breakdown": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 2,
+      "LOW": 3
+    }
+  },
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "bucket": "vish-logs-XXXXXXXXXXXX",
+      "issue": "Versioning is Disabled",
+      "recommendation": "Enable versioning to protect against accidental deletion or ransomware",
+      "category": "S3"
+    },
+    {
+      "severity": "LOW",
+      "bucket": "vish-logs-XXXXXXXXXXXX",
+      "issue": "Server access logging not enabled",
+      "recommendation": "Enable access logging to track who accessed the bucket",
+      "category": "S3"
+    },
+    {
+      "severity": "LOW",
+      "bucket": "vish-secure-data-XXXXXXXXXXXX",
+      "issue": "Server access logging not enabled",
+      "recommendation": "Enable access logging to track who accessed the bucket",
+      "category": "S3"
+    },
+    {
+      "severity": "MEDIUM",
+      "bucket": "vish-test-bucket-XXXXXXXXXXXX",
+      "issue": "Versioning is Disabled",
+      "recommendation": "Enable versioning to protect against accidental deletion or ransomware",
+      "category": "S3"
+    },
+    {
+      "severity": "LOW",
+      "bucket": "vish-test-bucket-XXXXXXXXXXXX",
+      "issue": "Server access logging not enabled",
+      "recommendation": "Enable access logging to track who accessed the bucket",
+      "category": "S3"
+    }
+  ]
+}

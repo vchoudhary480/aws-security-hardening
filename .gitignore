@@ -1,0 +1,32 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.python-version
+
+# AWS credentials - NEVER commit these
+.aws/
+credentials
+credentials.csv
+*credentials*
+access-keys*
+*.pem
+*.key
+
+# Local environment
+.env
+.env.local
+*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test data
+test-data.txt

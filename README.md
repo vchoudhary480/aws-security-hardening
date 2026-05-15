@@ -136,5 +136,5 @@ JSON report:
 ## Author
 
 Vishwa Prakash Choudhary |
-Computer Science, UC Davis
+Computer Science, UC Davis |
 vpc8848@gmail.com

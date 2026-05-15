@@ -144,4 +144,3 @@ See [`CIS_MAPPING.md`](CIS_MAPPING.md) for the control-by-control mapping betwee
 - vpc8848@gmail.com
 - [GitHub](https://github.com/vchoudhary480)
 
-<!-- GitHub topics to add via repo Settings: aws, security, boto3, cloud-security, cis-benchmark, python, iam, security-audit -->
